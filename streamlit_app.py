@@ -33,19 +33,19 @@ def format_class_name(name):
     return name
 
 # Mapeo de resultados para visualización y recomendaciones
-# NOTA: Las claves deben ser los nombres de clase EXACTOS que devuelve el modelo (sin la función format_class_name)
+# ¡CORRECCIÓN! Las claves ahora usan ESPACIOS para coincidir con la salida cruda del modelo
+# (e.g., "Tomato Late Blight" y "Tomato Tomato Mosaic Virus")
 CLASS_MAPPING = {
-    # Se asume que las claves originales del modelo son con Underscores (_)
-    "Tomato_Healthy": ("Hoja Sana", "✅", "La hoja de tomate no presenta síntomas visibles de plaga o enfermedad. Mantenimiento rutinario."),
-    "Tomato_Bacterial_Spot": ("Mancha Bacteriana", "⚠️", "Causada por la bacteria Xanthomonas spp. Requiere aplicación de bactericidas a base de cobre."),
-    "Tomato_Early_Blight": ("Tizón Temprano", "⚠️", "Causado por el hongo Alternaria solani. Aplicar fungicidas preventivos y rotación de cultivos."),
-    "Tomato_Late_Blight": ("Tizón Tardío", "🚨", "Causado por Phytophthora infestans. Es una enfermedad destructiva. Aislar y eliminar las plantas infectadas."),
-    "Tomato_Leaf_Mold": ("Moho de la Hoja", "⚠️", "Causado por Passalora fulva. Mejorar la ventilación y reducir la humedad. Usar fungicidas."),
-    "Tomato_Septoria_Leaf_Spot": ("Mancha Foliar Por Septoria", "⚠️", "Causado por Septoria lycopersici. Usar fungicidas y evitar mojar el follaje."),
-    "Tomato_Spider_Mites_Two_Spotted_Spider_Mite": ("Ácaros (Araña Roja)", "⚠️", "Causado por la plaga Tetranychus urticae. Aplicar acaricidas o depredadores naturales."),
-    "Tomato_Target_Spot": ("Mancha En Diana", "⚠️", "Causado por Corynespora cassiicola. Usar fungicidas y eliminar restos de plantas infectadas."),
-    "Tomato_Tomato_Mosaic_Virus": ("Virus del Mosaico (ToMV)", "🚨", "Enfermedad viral. No tiene cura. Eliminar y destruir la planta para evitar la propagación."),
-    "Tomato_Tomato_Yellowleaf_Curl_Virus": ("Virus del Enrollamiento de la Hoja (TYLCV)", "🚨", "Enfermedad viral. No tiene cura. El control se centra en el vector (mosca blanca).")
+    "Tomato Healthy": ("Hoja Sana", "✅", "La hoja de tomate no presenta síntomas visibles de plaga o enfermedad. Mantenimiento rutinario."),
+    "Tomato Bacterial Spot": ("Mancha Bacteriana", "⚠️", "Causada por la bacteria Xanthomonas spp. Requiere aplicación de bactericidas a base de cobre."),
+    "Tomato Early Blight": ("Tizón Temprano", "⚠️", "Causado por el hongo Alternaria solani. Aplicar fungicidas preventivos y rotación de cultivos."),
+    "Tomato Late Blight": ("Tizón Tardío", "🚨", "Causado por Phytophthora infestans. Es una enfermedad destructiva. Aislar y eliminar las plantas infectadas."),
+    "Tomato Leaf Mold": ("Moho de la Hoja", "⚠️", "Causado por Passalora fulva. Mejorar la ventilación y reducir la humedad. Usar fungicidas."),
+    "Tomato Septoria Leaf Spot": ("Mancha Foliar Por Septoria", "⚠️", "Causado por Septoria lycopersici. Usar fungicidas y evitar mojar el follaje."),
+    "Tomato Spider Mites Two Spotted Spider Mite": ("Ácaros (Araña Roja)", "⚠️", "Causado por la plaga Tetranychus urticae. Aplicar acaricidas o depredadores naturales."),
+    "Tomato Target Spot": ("Mancha En Diana", "⚠️", "Causado por Corynespora cassiicola. Usar fungicidas y eliminar restos de plantas infectadas."),
+    "Tomato Tomato Mosaic Virus": ("Virus del Mosaico (ToMV)", "🚨", "Enfermedad viral. No tiene cura. Eliminar y destruir la planta para evitar la propagación."),
+    "Tomato Tomato Yellowleaf Curl Virus": ("Virus del Enrollamiento de la Hoja (TYLCV)", "🚨", "Enfermedad viral. No tiene cura. El control se centra en el vector (mosca blanca).")
 }
 
 # --- 3. CARGA DE MODELO Y CLASES (Caching para eficiencia) ---
@@ -86,7 +86,8 @@ def predict_image(img_bytes, model):
 def display_top_n_probabilities(predictions, class_names, n=5):
     # Crear un DataFrame con las probabilidades
     results = pd.DataFrame({
-        'Clase': [format_class_name(name) for name in class_names],
+        # Aquí se usa el nombre RAW y luego se formatea para la tabla
+        'Clase': [format_class_name(name) for name in class_names], 
         'Probabilidad': predictions
     })
     
@@ -120,18 +121,19 @@ if model:
                 model
             )
             
-            # Obtener nombre de la clase RAW y Formateada
+            # Obtener nombre de la clase RAW
             predicted_class_raw = class_names[predicted_index]
-            predicted_class_formatted = format_class_name(predicted_class_raw)
+            # No necesitamos el formato aquí, pero lo mantenemos por si se usa en otro lado
+            predicted_class_formatted = format_class_name(predicted_class_raw) 
             confidence_percent = confidence * 100
             
             # --- LÓGICA DEL UMBRAL DE CONFIANZA ---
             if confidence >= UMBRAL_CONFIANZA:
                 
-                # CORRECCIÓN CLAVE AQUÍ: Usamos predicted_class_raw (la clave real)
-                # para buscar en CLASS_MAPPING, evitando que format_class_name() falle
+                # LA CORRECCIÓN CLAVE: Usamos predicted_class_raw (que tiene espacios) 
+                # para buscar en CLASS_MAPPING (que ahora también tiene espacios)
                 display_name, emoji, recommendation = CLASS_MAPPING.get(
-                    predicted_class_raw, # <-- CLAVE CORREGIDA
+                    predicted_class_raw, 
                     ("Diagnóstico Desconocido", "❓", "Información no disponible.")
                 )
                 
@@ -159,4 +161,4 @@ if model:
 
 
 st.markdown("---")
-st.markdown("Desarrollado con Python y Streamlit para la UPTC v2.")
+st.markdown("Desarrollado con Python y Streamlit para la UPTC v1.")
