@@ -6,12 +6,11 @@ import numpy as np
 import pickle
 from PIL import Image
 import io
+import pandas as pd # 🚨 Importación necesaria para mostrar la tabla
 
 # --- 1. CONFIGURACIÓN DE LA APLICACIÓN ---
-# Desactivar advertencias de Keras (opcional)
 tf.get_logger().setLevel('ERROR') 
 
-# Título y encabezado
 st.set_page_config(
     page_title="Diagnóstico de Tomate (90.45%)",
     page_icon="🍅"
@@ -25,18 +24,14 @@ st.markdown("---")
 MODEL_PATH = 'MobileNetV2_Tomato_Classifier.h5' 
 CLASSES_PATH = 'class_names.pkl' 
 IMG_SIZE = (224, 224) 
-UMBRAL_CONFIANZA = 0.70 # Estrategia de Rechazo: 70%
+UMBRAL_CONFIANZA = 0.60 # Ajustado a 60% para mayor usabilidad
 
-# 🚨 FUNCIÓN DE FORMATEO CORREGIDA 🚨
-# Solo reemplaza guiones bajos por espacios y usa título de caso.
-# Esto asegura que el nombre predicho coincida con la clave del diccionario (Ej: "Tomato Bacterial Spot").
 def format_class_name(name):
     name = name.replace("_", " ") 
     name = name.title()
     return name
 
 # Mapeo de resultados para visualización y recomendaciones
-# 🚨 CLAVES VERIFICADAS PARA COINCIDIR CON LA SALIDA DEL FORMATO 🚨
 CLASS_MAPPING = {
     "Tomato Healthy": ("Hoja Sana", "✅", "La hoja de tomate no presenta síntomas visibles de plaga o enfermedad. Mantenimiento rutinario."),
     "Tomato Bacterial Spot": ("Mancha Bacteriana", "⚠️", "Causada por la bacteria Xanthomonas spp. Requiere aplicación de bactericidas a base de cobre."),
@@ -46,7 +41,6 @@ CLASS_MAPPING = {
     "Tomato Septoria Leaf Spot": ("Mancha Foliar Por Septoria", "⚠️", "Causado por Septoria lycopersici. Usar fungicidas y evitar mojar el follaje."),
     "Tomato Spider Mites Two Spotted Spider Mite": ("Ácaros (Araña Roja)", "⚠️", "Causado por la plaga Tetranychus urticae. Aplicar acaricidas o depredadores naturales."),
     "Tomato Target Spot": ("Mancha En Diana", "⚠️", "Causado por Corynespora cassiicola. Usar fungicidas y eliminar restos de plantas infectadas."),
-    
     "Tomato Tomato Mosaic Virus": ("Virus del Mosaico (ToMV)", "🚨", "Enfermedad viral. No tiene cura. Eliminar y destruir la planta para evitar la propagación."),
     "Tomato Tomato Yellowleaf Curl Virus": ("Virus del Enrollamiento de la Hoja (TYLCV)", "🚨", "Enfermedad viral. No tiene cura. El control se centra en el vector (mosca blanca).")
 }
@@ -68,24 +62,44 @@ def load_assets():
 
 model, class_names = load_assets()
 
-# --- 4. FUNCIÓN DE PREDICCIÓN ---
+# --- 4. FUNCIÓN DE PREDICCIÓN (Modificada para devolver todas las probabilidades) ---
 
-def predict_image(img_bytes, model, class_names):
+def predict_image(img_bytes, model):
     img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
     img = img.resize(IMG_SIZE)
     img_array = image.img_to_array(img)
     img_array = img_array / 255.0 
     img_array = np.expand_dims(img_array, axis=0) 
 
-    predictions = model.predict(img_array, verbose=0)
+    # predictions es un array de 10 probabilidades
+    predictions = model.predict(img_array, verbose=0)[0]
     
-    predicted_index = np.argmax(predictions[0])
-    confidence = np.max(predictions[0])
-    predicted_class = class_names[predicted_index]
+    predicted_index = np.argmax(predictions)
+    confidence = np.max(predictions)
     
-    return predicted_class, confidence
+    return predicted_index, confidence, predictions
 
-# --- 5. INTERFAZ Y LÓGICA DE LA APP ---
+# --- 5. FUNCIÓN PARA MOSTRAR LA TABLA DE PROBABILIDADES ---
+def display_top_n_probabilities(predictions, class_names, n=5):
+    # Crear un DataFrame con las probabilidades
+    results = pd.DataFrame({
+        'Clase': [format_class_name(name) for name in class_names],
+        'Probabilidad': predictions
+    })
+    
+    # Ordenar por probabilidad descendente
+    results = results.sort_values(by='Probabilidad', ascending=False)
+    
+    # Mostrar solo las N más altas (o todas si son menos de N)
+    results_display = results.head(n).copy()
+    
+    # Formatear la probabilidad a porcentaje para la vista
+    results_display['Probabilidad'] = (results_display['Probabilidad'] * 100).map('{:.2f}%'.format)
+    
+    st.markdown("##### 🔍 Distribución de Probabilidades (Top 5)")
+    st.table(results_display.reset_index(drop=True))
+
+# --- 6. INTERFAZ Y LÓGICA DE LA APP ---
 
 if model:
     uploaded_file = st.file_uploader(
@@ -98,16 +112,17 @@ if model:
         st.markdown("---")
 
         with st.spinner('Analizando la imagen...'):
-            predicted_class_raw, confidence = predict_image(
+            predicted_index, confidence, all_predictions = predict_image(
                 uploaded_file.getvalue(), 
-                model, 
-                class_names
+                model
             )
             
-            # Formateo y Umbral de Confianza
+            # Obtener nombre de la clase
+            predicted_class_raw = class_names[predicted_index]
             predicted_class_formatted = format_class_name(predicted_class_raw)
             confidence_percent = confidence * 100
             
+            # --- LÓGICA DEL UMBRAL DE CONFIANZA ---
             if confidence >= UMBRAL_CONFIANZA:
                 
                 display_name, emoji, recommendation = CLASS_MAPPING.get(predicted_class_formatted, ("Diagnóstico Desconocido", "❓", "Información no disponible."))
@@ -131,6 +146,9 @@ if model:
                 """)
                 st.info("Por favor, sube una imagen clara de una hoja de tomate.")
 
-st.markdown("---")
-st.markdown("Desarrollado con Python y Streamlit para la UPTC con base en las CNN.")
+            # Mostrar la tabla de probabilidades en ambos casos (acepte o rechace)
+            display_top_n_probabilities(all_predictions, class_names)
 
+
+st.markdown("---")
+st.markdown("Desarrollado con Python y Streamlit para la UPTC v1.")
