@@ -25,18 +25,23 @@ st.markdown("---")
 MODEL_PATH = 'MobileNetV2_Tomato_Classifier.h5' 
 CLASSES_PATH = 'class_names.pkl' 
 IMG_SIZE = (224, 224) 
-UMBRAL_CONFIANZA = 0.60 # Ajustado a 60% para mayor usabilidad
+UMBRAL_CONFIANZA = 0.60 # Umbral de Aceptación
 
 def format_class_name(name):
-    # Esta función se usa solo para la visualización (ej. en la tabla)
-    # Reemplaza guiones bajos por espacios y capitaliza el título.
+    """
+    Función crucial para estandarizar el nombre de la clase.
+    Convierte 'tomato_late_blight' -> 'Tomato Late Blight'.
+    Esto asegura que la clave coincida con CLASS_MAPPING.
+    """
+    # Reemplaza guiones bajos por espacios
     name = name.replace("_", " ") 
+    # Capitaliza la primera letra de cada palabra
     name = name.title()
     return name
 
 # Mapeo de resultados para visualización y recomendaciones
-# IMPORTANTE: Las claves deben coincidir con la salida RAW del modelo después de la corrección
-# (es decir, después de reemplazar los guiones bajos por espacios).
+# Las CLAVES deben usar ESPACIOS y CAPITALIZACIÓN DE TÍTULO para coincidir con el
+# formato de 'format_class_name'.
 CLASS_MAPPING = {
     "Tomato Healthy": ("Hoja Sana", "✅", "La hoja de tomate no presenta síntomas visibles de plaga o enfermedad. Mantenimiento rutinario."),
     "Tomato Bacterial Spot": ("Mancha Bacteriana", "⚠️", "Causada por la bacteria Xanthomonas spp. Requiere aplicación de bactericidas a base de cobre."),
@@ -86,9 +91,9 @@ def predict_image(img_bytes, model):
 
 # --- 5. FUNCIÓN PARA MOSTRAR LA TABLA DE PROBABILIDADES ---
 def display_top_n_probabilities(predictions, class_names, n=5):
-    # Crear un DataFrame con las probabilidades
+    # Crear un DataFrame con probabilidades
     results = pd.DataFrame({
-        # Aquí se usa el nombre RAW y luego se formatea para la tabla
+        # Se formatea el nombre para la presentación en la tabla
         'Clase': [format_class_name(name) for name in class_names], 
         'Probabilidad': predictions
     })
@@ -123,14 +128,14 @@ if model:
                 model
             )
             
-            # 1. Obtener nombre de la clase RAW (ej. 'Tomato_Late_Blight')
+            # 1. Obtener nombre de la clase RAW (e.g., 'tomato_late_blight')
             predicted_class_raw = class_names[predicted_index]
             
             # *************************************************************************
-            # *** CORRECCIÓN CLAVE ***
-            # La clave de búsqueda debe tener ESPACIOS (ej. 'Tomato Late Blight') para
-            # coincidir con CLASS_MAPPING, ya que el nombre crudo tiene GUIONES BAJOS.
-            lookup_key = predicted_class_raw.replace("_", " ") 
+            # *** CORRECCIÓN DEFINITIVA APLICADA AQUÍ ***
+            # La clave de búsqueda se formatea COMPLETAMENTE (guiones bajos a espacios, minúsculas a Título)
+            # para coincidir con el formato de las CLAVES en CLASS_MAPPING.
+            lookup_key = format_class_name(predicted_class_raw)
             # *************************************************************************
             
             confidence_percent = confidence * 100
@@ -138,9 +143,10 @@ if model:
             # --- LÓGICA DEL UMBRAL DE CONFIANZA ---
             if confidence >= UMBRAL_CONFIANZA:
                 
-                # LA CORRECCIÓN APLICA AQUÍ: Usamos 'lookup_key'
+                # Se usa la clave formateada para obtener el diagnóstico y la recomendación
                 display_name, emoji, recommendation = CLASS_MAPPING.get(
                     lookup_key, 
+                    # Valor de reserva en caso de que la clave formateada no exista (¡no debería pasar ahora!)
                     ("Diagnóstico Desconocido", "❓", "Información no disponible.")
                 )
                 
@@ -168,5 +174,4 @@ if model:
 
 
 st.markdown("---")
-st.markdown("Desarrollado con Python y Streamlit para la UPTC v3.")
-
+st.markdown("Desarrollado con Python y Streamlit para la UPTC vmil.")
