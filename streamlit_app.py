@@ -25,7 +25,7 @@ st.markdown("---")
 MODEL_PATH = 'MobileNetV2_Tomato_Classifier.h5' 
 CLASSES_PATH = 'class_names.pkl' 
 IMG_SIZE = (224, 224) 
-UMBRAL_CONFIANZA = 0.60 # Umbral de Aceptación
+UMBRAL_CONFIANZA = 0.70 # Umbral de Aceptación
 
 def format_class_name(name):
     """
@@ -175,3 +175,4 @@ if model:
 
 st.markdown("---")
 st.markdown("Desarrollado con Python y Streamlit para la UPTC vmil.")
+
