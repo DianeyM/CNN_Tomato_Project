@@ -132,4 +132,5 @@ if model:
                 st.info("Por favor, sube una imagen clara de una hoja de tomate.")
 
 st.markdown("---")
-st.markdown("Desarrollado con Python y Streamlit para la UPTC.")
+st.markdown("Desarrollado con Python y Streamlit para la UPTC con base en las CNN.")
+
