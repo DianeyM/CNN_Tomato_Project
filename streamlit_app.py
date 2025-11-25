@@ -9,6 +9,7 @@ import io
 import pandas as pd
 
 # --- 1. CONFIGURACIÓN DE LA APLICACIÓN ---
+# Suprimir advertencias de TensorFlow para mantener la interfaz limpia
 tf.get_logger().setLevel('ERROR') 
 
 st.set_page_config(
@@ -28,13 +29,14 @@ UMBRAL_CONFIANZA = 0.60 # Ajustado a 60% para mayor usabilidad
 
 def format_class_name(name):
     # Esta función se usa solo para la visualización (ej. en la tabla)
+    # Reemplaza guiones bajos por espacios y capitaliza el título.
     name = name.replace("_", " ") 
     name = name.title()
     return name
 
 # Mapeo de resultados para visualización y recomendaciones
-# ¡CORRECCIÓN! Las claves ahora usan ESPACIOS para coincidir con la salida cruda del modelo
-# (e.g., "Tomato Late Blight" y "Tomato Tomato Mosaic Virus")
+# IMPORTANTE: Las claves deben coincidir con la salida RAW del modelo después de la corrección
+# (es decir, después de reemplazar los guiones bajos por espacios).
 CLASS_MAPPING = {
     "Tomato Healthy": ("Hoja Sana", "✅", "La hoja de tomate no presenta síntomas visibles de plaga o enfermedad. Mantenimiento rutinario."),
     "Tomato Bacterial Spot": ("Mancha Bacteriana", "⚠️", "Causada por la bacteria Xanthomonas spp. Requiere aplicación de bactericidas a base de cobre."),
@@ -121,19 +123,24 @@ if model:
                 model
             )
             
-            # Obtener nombre de la clase RAW
+            # 1. Obtener nombre de la clase RAW (ej. 'Tomato_Late_Blight')
             predicted_class_raw = class_names[predicted_index]
-            # No necesitamos el formato aquí, pero lo mantenemos por si se usa en otro lado
-            predicted_class_formatted = format_class_name(predicted_class_raw) 
+            
+            # *************************************************************************
+            # *** CORRECCIÓN CLAVE ***
+            # La clave de búsqueda debe tener ESPACIOS (ej. 'Tomato Late Blight') para
+            # coincidir con CLASS_MAPPING, ya que el nombre crudo tiene GUIONES BAJOS.
+            lookup_key = predicted_class_raw.replace("_", " ") 
+            # *************************************************************************
+            
             confidence_percent = confidence * 100
             
             # --- LÓGICA DEL UMBRAL DE CONFIANZA ---
             if confidence >= UMBRAL_CONFIANZA:
                 
-                # LA CORRECCIÓN CLAVE: Usamos predicted_class_raw (que tiene espacios) 
-                # para buscar en CLASS_MAPPING (que ahora también tiene espacios)
+                # LA CORRECCIÓN APLICA AQUÍ: Usamos 'lookup_key'
                 display_name, emoji, recommendation = CLASS_MAPPING.get(
-                    predicted_class_raw, 
+                    lookup_key, 
                     ("Diagnóstico Desconocido", "❓", "Información no disponible.")
                 )
                 
@@ -162,4 +169,3 @@ if model:
 
 st.markdown("---")
 st.markdown("Desarrollado con Python y Streamlit para la UPTC v2.")
-
