@@ -161,4 +161,5 @@ if model:
 
 
 st.markdown("---")
-st.markdown("Desarrollado con Python y Streamlit para la UPTC v1.")
+st.markdown("Desarrollado con Python y Streamlit para la UPTC v2.")
+
