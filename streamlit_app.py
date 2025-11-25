@@ -22,29 +22,33 @@ st.markdown("Clasificación multiclase de 10 condiciones de la hoja de tomate us
 st.markdown("---")
 
 # --- 2. PARÁMETROS CLAVE DEL MODELO ---
-# El servidor de Streamlit buscará estos archivos en la misma carpeta.
 MODEL_PATH = 'MobileNetV2_Tomato_Classifier.h5' 
 CLASSES_PATH = 'class_names.pkl' 
 IMG_SIZE = (224, 224) 
 UMBRAL_CONFIANZA = 0.70 # Estrategia de Rechazo: 70%
 
-# Función para formatear el nombre de la clase
+# 🚨 FUNCIÓN DE FORMATEO CORREGIDA 🚨
+# Solo reemplaza guiones bajos por espacios y usa título de caso.
+# Esto asegura que el nombre predicho coincida con la clave del diccionario (Ej: "Tomato Bacterial Spot").
 def format_class_name(name):
-    name = name.replace("Tomato_", "").replace("_", " ")
-    return name.title()
+    name = name.replace("_", " ") 
+    name = name.title()
+    return name
 
 # Mapeo de resultados para visualización y recomendaciones
+# 🚨 CLAVES VERIFICADAS PARA COINCIDIR CON LA SALIDA DEL FORMATO 🚨
 CLASS_MAPPING = {
     "Tomato Healthy": ("Hoja Sana", "✅", "La hoja de tomate no presenta síntomas visibles de plaga o enfermedad. Mantenimiento rutinario."),
     "Tomato Bacterial Spot": ("Mancha Bacteriana", "⚠️", "Causada por la bacteria Xanthomonas spp. Requiere aplicación de bactericidas a base de cobre."),
     "Tomato Early Blight": ("Tizón Temprano", "⚠️", "Causado por el hongo Alternaria solani. Aplicar fungicidas preventivos y rotación de cultivos."),
     "Tomato Late Blight": ("Tizón Tardío", "🚨", "Causado por Phytophthora infestans. Es una enfermedad destructiva. Aislar y eliminar las plantas infectadas."),
     "Tomato Leaf Mold": ("Moho de la Hoja", "⚠️", "Causado por Passalora fulva. Mejorar la ventilación y reducir la humedad. Usar fungicidas."),
-    "Tomato Septoria Leaf Spot": ("Mancha Foliar por Septoria", "⚠️", "Causado por Septoria lycopersici. Usar fungicidas y evitar mojar el follaje."),
+    "Tomato Septoria Leaf Spot": ("Mancha Foliar Por Septoria", "⚠️", "Causado por Septoria lycopersici. Usar fungicidas y evitar mojar el follaje."),
     "Tomato Spider Mites Two Spotted Spider Mite": ("Ácaros (Araña Roja)", "⚠️", "Causado por la plaga Tetranychus urticae. Aplicar acaricidas o depredadores naturales."),
-    "Tomato Target Spot": ("Mancha en Diana", "⚠️", "Causado por Corynespora cassiicola. Usar fungicidas y eliminar restos de plantas infectadas."),
+    "Tomato Target Spot": ("Mancha En Diana", "⚠️", "Causado por Corynespora cassiicola. Usar fungicidas y eliminar restos de plantas infectadas."),
+    
     "Tomato Tomato Mosaic Virus": ("Virus del Mosaico (ToMV)", "🚨", "Enfermedad viral. No tiene cura. Eliminar y destruir la planta para evitar la propagación."),
-    "Tomato Yellowleaf Curl Virus": ("Virus del Enrollamiento de la Hoja (TYLCV)", "🚨", "Enfermedad viral. No tiene cura. El control se centra en el vector (mosca blanca).")
+    "Tomato Tomato Yellowleaf Curl Virus": ("Virus del Enrollamiento de la Hoja (TYLCV)", "🚨", "Enfermedad viral. No tiene cura. El control se centra en el vector (mosca blanca).")
 }
 
 # --- 3. CARGA DE MODELO Y CLASES (Caching para eficiencia) ---
@@ -52,10 +56,7 @@ CLASS_MAPPING = {
 @st.cache_resource
 def load_assets():
     try:
-        # Cargar el modelo h5
         model = load_model(MODEL_PATH)
-        
-        # Cargar los nombres de las clases (lista)
         with open(CLASSES_PATH, 'rb') as f:
             class_names = pickle.load(f)
             
@@ -103,10 +104,10 @@ if model:
                 class_names
             )
             
+            # Formateo y Umbral de Confianza
             predicted_class_formatted = format_class_name(predicted_class_raw)
             confidence_percent = confidence * 100
             
-            # --- LÓGICA DEL UMBRAL DE CONFIANZA ---
             if confidence >= UMBRAL_CONFIANZA:
                 
                 display_name, emoji, recommendation = CLASS_MAPPING.get(predicted_class_formatted, ("Diagnóstico Desconocido", "❓", "Información no disponible."))
