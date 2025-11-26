@@ -7,6 +7,7 @@ import pickle
 from PIL import Image
 import io
 import pandas as pd
+import re # ¡NECESARIO AGREGAR ESTA LÍNEA AL PRINCIPIO DEL ARCHIVO!
 
 # --- 1. CONFIGURACIÓN DE LA APLICACIÓN ---
 # Suprimir advertencias de TensorFlow para mantener la interfaz limpia
@@ -185,6 +186,7 @@ if model:
 
 st.markdown("---")
 st.markdown("Desarrollado con Python y Streamlit para la UPTC v5.")
+
 
 
 
