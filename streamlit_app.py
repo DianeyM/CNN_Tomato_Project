@@ -7,7 +7,7 @@ import pickle
 from PIL import Image
 import io
 import pandas as pd
-import re # ¡NECESARIO AGREGAR ESTA LÍNEA AL PRINCIPIO DEL ARCHIVO!
+import re # Necesario para sanear los nombres de clases
 
 # --- 1. CONFIGURACIÓN DE LA APLICACIÓN ---
 # Suprimir advertencias de TensorFlow para mantener la interfaz limpia
@@ -15,7 +15,8 @@ tf.get_logger().setLevel('ERROR')
 
 st.set_page_config(
     page_title="Diagnóstico de Tomate (90.45%)",
-    page_icon="🍅"
+    page_icon="🍅",
+    layout="wide" # Usamos layout wide para optimizar el uso de las dos columnas
 )
 
 st.title("🍅 PROTOTIPO WEB: DIAGNÓSTICO DE ENFERMEDADES DEL TOMATE")
@@ -23,6 +24,8 @@ st.markdown("Clasificación multiclase de 10 condiciones de la hoja de tomate us
 st.markdown("---")
 
 # --- 2. PARÁMETROS CLAVE DEL MODELO ---
+# NOTA: Estos archivos (modelo .h5 y clases .pkl) deben estar en el mismo 
+# repositorio de Streamlit Community Cloud para el despliegue.
 MODEL_PATH = 'MobileNetV2_Tomato_Classifier.h5' 
 CLASSES_PATH = 'class_names.pkl' 
 IMG_SIZE = (224, 224) 
@@ -33,17 +36,16 @@ def format_class_name(name):
     Función CRUCIAL para estandarizar el nombre de la clase, saneando caracteres problemáticos 
     como los que se encuentran en el archivo class_names.pkl.
     """
-    # 1. Eliminar caracteres no alfanuméricos que NO sean guiones bajos (ej: el '%' en el TYLCV).
+    # 1. Eliminar caracteres no alfanuméricos que NO sean guiones bajos.
     name = re.sub(r'[^\w_]', '', name)
     
     # 2. Reemplaza cualquier secuencia de guiones bajos con un solo espacio.
-    #    Esto maneja tanto "_" como "__" (corrigiendo Target Spot y Virus).
     name = re.sub(r'_{1,}', ' ', name)
     
     # 3. Capitaliza la primera letra de cada palabra
     name = name.title()
-           
-    # 4. Limpia cualquier espacio sobrante al principio o al final (¡SOLUCIÓN FINAL!).
+        
+    # 4. Limpia cualquier espacio sobrante al principio o al final.
     name = name.strip() 
     
     return name
@@ -71,13 +73,14 @@ CLASS_MAPPING = {
 def load_assets():
     try:
         model = load_model(MODEL_PATH)
+        # Asumiendo que class_names.pkl está en la misma ubicación
         with open(CLASSES_PATH, 'rb') as f:
             class_names = pickle.load(f)
             
         return model, class_names
         
     except FileNotFoundError as e:
-        st.error(f"Error al cargar archivos: {e}. Asegúrate de que '{MODEL_PATH}' y '{CLASSES_PATH}' estén en la misma carpeta que 'streamlit_app.py'.")
+        st.error(f"Error al cargar archivos: {e}. Asegúrate de que '{MODEL_PATH}' y '{CLASSES_PATH}' estén cargados en el entorno de Streamlit.")
         return None, None
 
 model, class_names = load_assets()
@@ -120,77 +123,77 @@ def display_top_n_probabilities(predictions, class_names, n=5):
     st.markdown("##### 🔍 Distribución de Probabilidades (Top 5)")
     st.table(results_display.reset_index(drop=True))
 
-# --- 6. INTERFAZ Y LÓGICA DE LA APP ---
+# --- 6. INTERFAZ Y LÓGICA DE LA APP (Ajustada a Dos Columnas) ---
 
 if model:
-    uploaded_file = st.file_uploader(
-        "Sube una imagen de una hoja de tomate para diagnosticar (JPG/PNG)", 
-        type=["jpg", "jpeg", "png"]
-    )
+    # 1. Define two columns for the main interface (Upload vs. Result)
+    # ESTA LÍNEA ES CLAVE: Crea el layout de dos columnas.
+    col1, col2 = st.columns(2)
 
+    # 2. Lógica de subida en la primera columna (col1: izquierda)
+    with col1:
+        uploaded_file = st.file_uploader(
+            "Sube una imagen de una hoja de tomate para diagnosticar (JPG/PNG)", 
+            type=["jpg", "jpeg", "png"]
+        )
+        
+        # Mostrar la imagen subida en la misma columna
+        if uploaded_file is not None:
+            st.image(uploaded_file, caption='Imagen Subida', use_column_width=True)
+            st.markdown("---")
+
+
+    # 3. Lógica de predicción y resultados en la segunda columna (col2: derecha)
     if uploaded_file is not None:
-        st.image(uploaded_file, caption='Imagen Subida', use_column_width=True, width=300)
-        st.markdown("---")
-
-        with st.spinner('Analizando la imagen...'):
-            predicted_index, confidence, all_predictions = predict_image(
-                uploaded_file.getvalue(), 
-                model
-            )
+        with col2:
+            st.markdown("---") # Separador visual en la columna de resultados
             
-            # 1. Obtener nombre de la clase RAW (e.g., 'tomato_late_blight')
-            predicted_class_raw = class_names[predicted_index]
-            
-            # *************************************************************************
-            # *** CORRECCIÓN DEFINITIVA APLICADA AQUÍ ***
-            # La clave de búsqueda se formatea COMPLETAMENTE (guiones bajos a espacios, minúsculas a Título)
-            # para coincidir con el formato de las CLAVES en CLASS_MAPPING.
-            lookup_key = format_class_name(predicted_class_raw)
-            # *************************************************************************
-            
-            confidence_percent = confidence * 100
-            
-            # --- LÓGICA DEL UMBRAL DE CONFIANZA ---
-            if confidence >= UMBRAL_CONFIANZA:
-                
-                # Se usa la clave formateada para obtener el diagnóstico y la recomendación
-                display_name, emoji, recommendation = CLASS_MAPPING.get(
-                    lookup_key, 
-                    # Valor de reserva en caso de que la clave formateada no exista (¡no debería pasar ahora!)
-                    ("Diagnóstico Desconocido", "❓", "Información no disponible.")
+            with st.spinner('Analizando la imagen...'):
+                predicted_index, confidence, all_predictions = predict_image(
+                    uploaded_file.getvalue(), 
+                    model
                 )
                 
-                # Mostrar resultado de ACEPTACIÓN
-                st.subheader(f"{emoji} Resultado del Diagnóstico: {display_name}")
-                st.metric(
-                    label="Confianza del Modelo", 
-                    value=f"{confidence_percent:.2f}%",
-                    delta=f"Umbral de Aceptación: {UMBRAL_CONFIANZA*100:.0f}%"
-                )
-                st.info(f"**Recomendación:** {recommendation}")
+                # 1. Obtener nombre de la clase RAW
+                predicted_class_raw = class_names[predicted_index]
                 
-            else:
-                # Mostrar resultado de RECHAZO (Umbral no superado)
-                st.error("❌ IMAGEN NO VÁLIDA O INSUFICIENTE CERTEZA")
-                st.warning(f"""
-                El modelo no pudo identificar una hoja de tomate o la certeza de la predicción 
-                ({confidence_percent:.2f}%) es inferior al umbral mínimo requerido del 
-                **{UMBRAL_CONFIANZA*100:.0f}%**.
-                """)
-                st.info("Por favor, sube una imagen clara de una hoja de tomate.")
+                # 2. Formatear la clave de búsqueda
+                lookup_key = format_class_name(predicted_class_raw)
+                
+                confidence_percent = confidence * 100
+                
+                # --- LÓGICA DEL UMBRAL DE CONFIANZA ---
+                if confidence >= UMBRAL_CONFIANZA:
+                    
+                    # Se usa la clave formateada para obtener el diagnóstico y la recomendación
+                    display_name, emoji, recommendation = CLASS_MAPPING.get(
+                        lookup_key, 
+                        ("Diagnóstico Desconocido", "❓", "Información no disponible.")
+                    )
+                    
+                    # Mostrar resultado de ACEPTACIÓN
+                    st.subheader(f"{emoji} Resultado del Diagnóstico: {display_name}")
+                    st.metric(
+                        label="Confianza del Modelo", 
+                        value=f"{confidence_percent:.2f}%",
+                        delta=f"Umbral de Aceptación: {UMBRAL_CONFIANZA*100:.0f}%"
+                    )
+                    st.info(f"**Recomendación:** {recommendation}")
+                    
+                else:
+                    # Mostrar resultado de RECHAZO (Umbral no superado)
+                    st.error("❌ IMAGEN NO VÁLIDA O INSUFICIENTE CERTEZA")
+                    st.warning(f"""
+                    El modelo no pudo identificar una hoja de tomate o la certeza de la predicción 
+                    ({confidence_percent:.2f}%) es inferior al umbral mínimo requerido del 
+                    **{UMBRAL_CONFIANZA*100:.0f}%**.
+                    """)
+                    st.info("Por favor, sube una imagen clara de una hoja de tomate.")
 
-            # Mostrar la tabla de probabilidades en ambos casos (acepte o rechace)
+            # Mostrar la tabla de probabilidades en la columna de resultados
             display_top_n_probabilities(all_predictions, class_names)
+            st.markdown("---")
 
 
 st.markdown("---")
 st.markdown("Desarrollado con Python y Streamlit para la UPTC v5.")
-
-
-
-
-
-
-
-
-
