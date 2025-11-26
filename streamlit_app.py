@@ -27,7 +27,7 @@ CLASSES_PATH = 'class_names.pkl'
 IMG_SIZE = (224, 224) 
 UMBRAL_CONFIANZA = 0.70 # Umbral de Aceptación
 
-**Cambio 2: La Función de Formato (Línea 44)**
+#**Cambio 2: La Función de Formato (Línea 44)**
 Debe añadir el `.strip()` para eliminar cualquier espacio invisible que venga del modelo.
 ```python
 def format_class_name(name):
@@ -174,6 +174,7 @@ if model:
 
 st.markdown("---")
 st.markdown("Desarrollado con Python y Streamlit para la UPTC v5.")
+
 
 
 
