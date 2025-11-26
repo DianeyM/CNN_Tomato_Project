@@ -27,16 +27,26 @@ CLASSES_PATH = 'class_names.pkl'
 IMG_SIZE = (224, 224) 
 UMBRAL_CONFIANZA = 0.70 # Umbral de Aceptación
 
-#**Cambio 2: La Función de Formato (Línea 44)**
-#Debe añadir el `.strip()` para eliminar cualquier espacio invisible que venga del modelo.
-#```python
 def format_class_name(name):
-    # 1. Reemplaza guiones bajos por espacios
-    name = name.replace("_", " ") 
-    # 2. Capitaliza la primera letra de cada palabra
+    """
+    Función CRUCIAL para estandarizar el nombre de la clase, saneando caracteres problemáticos 
+    como los que se encuentran en el archivo class_names.pkl.
+    """
+    # 1. Eliminar caracteres no alfanuméricos que NO sean guiones bajos (ej: el '%' en el TYLCV).
+    name = re.sub(r'[^\w_]', '', name)
+    
+    # 2. Reemplaza cualquier secuencia de guiones bajos con un solo espacio.
+    #    Esto maneja tanto "_" como "__" (corrigiendo Target Spot y Virus).
+    name = re.sub(r'_{1,}', ' ', name)
+    
+    # 3. Capitaliza la primera letra de cada palabra
     name = name.title()
-    # 3. Limpia cualquier espacio sobrante (¡ESTO RESUELVE EL FALLO!)
-    return name.strip()
+    
+       
+    # 5. Limpia cualquier espacio sobrante al principio o al final (¡SOLUCIÓN FINAL!).
+    name = name.strip() 
+    
+    return name
 
 # Mapeo de resultados para visualización y recomendaciones
 # Las CLAVES deben usar ESPACIOS y CAPITALIZACIÓN DE TÍTULO para coincidir con el
@@ -175,6 +185,7 @@ if model:
 
 st.markdown("---")
 st.markdown("Desarrollado con Python y Streamlit para la UPTC v5.")
+
 
 
 
