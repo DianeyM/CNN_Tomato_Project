@@ -195,5 +195,7 @@ if model:
             st.markdown("---")
 
 
+# Se modifica el footer para centrar el texto.
 st.markdown("---")
-st.markdown("Desarrollado con Python y Streamlit para la UPTC v5.")
+st.markdown("<p style='text-align: center;'>Desarrollado con Python y Streamlit para la UPTC v6.</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center;'>Creado por: Dianey Marcela Macias Vargas</p>", unsafe_allow_html=True)
