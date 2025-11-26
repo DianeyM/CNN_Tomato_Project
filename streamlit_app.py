@@ -42,9 +42,8 @@ def format_class_name(name):
     
     # 3. Capitaliza la primera letra de cada palabra
     name = name.title()
-    
-       
-    # 5. Limpia cualquier espacio sobrante al principio o al final (¡SOLUCIÓN FINAL!).
+           
+    # 4. Limpia cualquier espacio sobrante al principio o al final (¡SOLUCIÓN FINAL!).
     name = name.strip() 
     
     return name
@@ -186,6 +185,7 @@ if model:
 
 st.markdown("---")
 st.markdown("Desarrollado con Python y Streamlit para la UPTC v5.")
+
 
 
 
